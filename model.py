@@ -1,10 +1,14 @@
-from stockdata import df
+from stockdata import df, dates
 from numpy import array
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import root_mean_squared_error
 import torch
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sns
 
 scaler = StandardScaler()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -84,3 +88,42 @@ y_test = scaler.inverse_transform(y_test)
 
 rmse = root_mean_squared_error(y_test, y_pred)
 print(f"RMSE: {rmse:.2f} rubles")
+
+#Chart
+y_dates = dates['date'].iloc[train_size + 30::(train_size + 30 + len(y_test))]
+
+
+def to_1d(arr):
+    if hasattr(arr, 'values'):
+        return arr.values.ravel()
+    return np.array(arr).ravel()
+
+y_test_flat = to_1d(y_test)
+y_pred_flat = to_1d(y_pred)
+start_idx = train_size + 30
+y_dates_correct = dates['date'].iloc[start_idx:]
+y_dates_flat = to_1d(y_dates_correct)
+
+chart_df = pd.DataFrame({
+    'date': y_dates_flat,
+    'real': y_test_flat,
+    'predict': y_pred_flat
+})
+
+sns.set_style('darkgrid')
+sns.set_context('talk')
+
+plt.figure(figsize=(20, 8))
+
+sns.lineplot(data=chart_df, x='date', y='real', color='red', label='Реальная цена')
+
+sns.lineplot(data=chart_df, x='date', y='predict', color='blue', label='Прогноз модели')
+
+plt.title('Сравнение реальной цены и прогноза модели (Тестовая выборка)', fontsize=16)
+plt.xlabel("Дата", fontsize=14)
+plt.ylabel("Цена (₽)", fontsize=14)
+plt.legend(fontsize=12)
+
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
